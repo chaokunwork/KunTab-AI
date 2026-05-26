@@ -383,9 +383,15 @@ select:focus {
    Home Page / Dashboard
    ========================================================================== */
 
-.home-page {
+.home-page,
+.bookmark-page,
+.backup-page,
+.settings-page {
   position: relative;
   z-index: 2;
+}
+
+.home-page {
   display: flex;
   flex-direction: column;
   gap: 2rem;
