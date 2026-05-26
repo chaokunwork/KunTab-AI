@@ -331,8 +331,9 @@ export default function App() {
   const [importing, setImporting] = useState(false);
 
   // Pagination State
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
+  const [subTab, setSubTab] = useState<'all' | 'web' | 'folder'>('all');
 
   // Bookmarks Table Row Menu State
   const [activeActionRowId, setActiveActionRowId] = useState<string | null>(null);
@@ -397,11 +398,11 @@ export default function App() {
     }
   };
 
-  // Reset pagination on folder/search change
+  // Reset pagination on folder/search/subTab change
   useEffect(() => {
     setCurrentPage(1);
     setActiveActionRowId(null);
-  }, [selectedFolderId, bookmarkQuery]);
+  }, [selectedFolderId, bookmarkQuery, subTab]);
 
   useEffect(() => {
     reloadBookmarks();
@@ -454,15 +455,106 @@ export default function App() {
     root.dataset.fontSize = settings.fontSize;
   }, [settings.theme, settings.fontSize]);
 
-  const bookmarksInSelectedFolder = useMemo(() => {
-    const list = collectBookmarksInFolder(bookmarkTree, selectedFolderId);
-    if (!bookmarkQuery.trim()) return list;
+  const currentBookmarkNode = useMemo(() => {
+    if (selectedFolderId === '0') return null;
+    const findNode = (nodes: BookmarkNode[]): BookmarkNode | null => {
+      for (const n of nodes) {
+        if (n.id === selectedFolderId) return n;
+        if (n.children) {
+          const found = findNode(n.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return findNode(bookmarkTree);
+  }, [bookmarkTree, selectedFolderId]);
+
+  const currentFolderName = useMemo(() => {
+    if (selectedFolderId === '0') return '全部书签';
+    return currentBookmarkNode?.title || '未命名文件夹';
+  }, [currentBookmarkNode, selectedFolderId]);
+
+  const selectedFolderNode = useMemo(() => {
+    const findNode = (nodes: FolderNode[]): FolderNode | null => {
+      for (const n of nodes) {
+        if (n.id === selectedFolderId) return n;
+        const found = findNode(n.children);
+        if (found) return found;
+      }
+      return null;
+    };
+    return findNode(folderTree);
+  }, [folderTree, selectedFolderId]);
+
+  const displayItems = useMemo(() => {
+    const countBookmarksInNode = (node: BookmarkNode): number => {
+      if (node.url) return 1;
+      return (node.children ?? []).reduce((sum, child) => sum + countBookmarksInNode(child), 0);
+    };
+
+    const toFlatBookmark = (node: BookmarkNode, folderName: string): FlatBookmark => ({
+      id: node.id,
+      parentId: node.parentId,
+      title: node.title || node.url || '',
+      url: node.url || '',
+      folderName,
+      folderPath: '',
+      dateAdded: node.dateAdded,
+    });
 
     const query = bookmarkQuery.trim().toLowerCase();
-    return list.filter((bookmark) => {
-      return bookmark.title.toLowerCase().includes(query) || bookmark.url.toLowerCase().includes(query);
-    });
-  }, [bookmarkTree, selectedFolderId, bookmarkQuery]);
+
+    // Case 1: Search is active (recursively search pages only)
+    if (query) {
+      const searchList = collectBookmarksInFolder(bookmarkTree, selectedFolderId);
+      return searchList
+        .filter((b) => b.title.toLowerCase().includes(query) || b.url.toLowerCase().includes(query))
+        .map((b) => ({ ...b, isFolder: false as const }));
+    }
+
+    // Case 2: Normal display
+    if (selectedFolderId === '0') {
+      if (subTab === 'folder') {
+        const rootFolder = folderTree.find((f) => f.id === '0');
+        const list = rootFolder ? rootFolder.children : folderTree;
+        return list.map((f) => ({
+          id: f.id,
+          title: f.title,
+          isFolder: true as const,
+          bookmarkCount: f.bookmarkCount,
+        }));
+      } else {
+        const webpages = collectBookmarksInFolder(bookmarkTree, '0');
+        return webpages.map((w) => ({ ...w, isFolder: false as const }));
+      }
+    } else {
+      if (!currentBookmarkNode) return [];
+      const children = currentBookmarkNode.children ?? [];
+      const out: any[] = [];
+
+      if (subTab === 'all' || subTab === 'folder') {
+        const subfolders = children.filter((c) => !c.url);
+        out.push(
+          ...subfolders.map((f) => ({
+            id: f.id,
+            title: f.title,
+            isFolder: true as const,
+            bookmarkCount: countBookmarksInNode(f),
+          }))
+        );
+      }
+
+      if (subTab === 'all' || subTab === 'web') {
+        const webpages = children.filter((c) => c.url);
+        out.push(...webpages.map((w) => ({ ...toFlatBookmark(w, currentFolderName), isFolder: false as const })));
+      }
+
+      return out;
+    }
+  }, [bookmarkTree, folderTree, selectedFolderId, subTab, bookmarkQuery, currentBookmarkNode, currentFolderName]);
+
+  const bookmarksInSelectedFolder = displayItems;
 
   // Paginated List
   const paginatedBookmarks = useMemo(() => {
@@ -668,7 +760,7 @@ export default function App() {
   };
 
   const onDeleteFolder = async (folder: FolderNode) => {
-    if (folder.id === '0') return;
+    if (folder.id === '0' || folder.id === '1' || folder.id === '2' || folder.id === '3') return;
     if (!window.confirm(fmt(text.confirmDeleteFolder, { title: folder.title }))) return;
     await deleteFolderTree(folder.id);
     if (selectedFolderId === folder.id) {
@@ -1000,29 +1092,6 @@ export default function App() {
 
         {activeTab === 'bookmarks' && (
           <section className="bookmark-page">
-            <div className="bookmark-toolbar">
-              <div className="bookmark-search-wrap">
-                <Search size={16} />
-                <input
-                  value={bookmarkQuery}
-                  onChange={(event) => setBookmarkQuery(event.target.value)}
-                  placeholder={text.bookmarkSearchPlaceholder}
-                />
-                <kbd className="kbd-shortcut">/</kbd>
-              </div>
-              <button className="outlined-primary" onClick={onCreateFolder}>
-                <FolderPlus size={16} />
-                {text.newFolder}
-              </button>
-              <button onClick={() => setActiveTab('backup')}>
-                <CircleArrowDown size={16} />
-                {text.importExport}
-              </button>
-              <button className="icon-circle-btn" style={{ width: '2.3rem', height: '2.3rem', borderRadius: '12px' }}>
-                <MoreVertical size={16} />
-              </button>
-            </div>
-
             <div className="bookmark-layout">
               <aside className="folder-tree">
                 <div className="folder-head">
@@ -1030,9 +1099,6 @@ export default function App() {
                     <Folder size={16} />
                     <span>{text.folders}</span>
                   </div>
-                  <button className="folder-add-btn" onClick={onCreateFolder} title={text.newFolder}>
-                    <Plus size={16} />
-                  </button>
                 </div>
                 <div className="folder-list-scroll">
                   <div className={selectedFolderId === '0' ? 'folder-row active' : 'folder-row'}>
@@ -1052,97 +1118,174 @@ export default function App() {
                     deleteTitle={text.deleteFolder}
                   />
                 </div>
-                <div className="folder-summary-card">
-                  共 {folderCount} 个文件夹
+                <div className="folder-sidebar-footer">
+                  <button className="folder-add-footer-btn" onClick={onCreateFolder}>
+                    <Plus size={16} />
+                    <span>{text.newFolder}</span>
+                  </button>
                 </div>
               </aside>
 
-              <section className="bookmark-table-wrap">
-                <table className={settings.compactMode ? 'bookmark-table compact' : 'bookmark-table'}>
-                  <thead>
-                    <tr>
-                      <th className="col-checkbox">
-                        <input type="checkbox" className="bookmark-table-checkbox" disabled />
-                      </th>
-                      <th className="col-title">{text.title}</th>
-                      <th className="col-url">{text.url}</th>
-                      <th className="col-folder">{text.parentFolder}</th>
-                      <th className="col-date">{text.addedAt}</th>
-                      <th className="col-actions">{text.actions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedBookmarks.map((bookmark) => (
-                      <tr key={bookmark.id}>
-                        <td className="col-checkbox">
-                          <input type="checkbox" className="bookmark-table-checkbox" disabled />
-                        </td>
-                        <td className="col-title">
-                          <div className="bookmark-title-cell">
-                            <img src={faviconOf(bookmark.url)} alt="" />
-                            <span title={bookmark.title}>{bookmark.title}</span>
-                          </div>
-                        </td>
-                        <td className="col-url">
-                          <a className="bookmark-url-link" href={bookmark.url} target="_blank" rel="noreferrer">
-                            {hostnameOf(bookmark.url)}
-                          </a>
-                        </td>
-                        <td className="col-folder">
-                          <span className={getFolderTagClass(bookmark.folderName)}>
-                            {bookmark.folderName || '-'}
-                          </span>
-                        </td>
-                        <td className="col-date">{formatDateTime(bookmark.dateAdded)}</td>
-                        <td className="col-actions" style={{ position: 'relative' }}>
-                          <button
-                            className="action-trigger-btn"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setActiveActionRowId(activeActionRowId === bookmark.id ? null : bookmark.id);
-                            }}
-                            aria-label="bookmark actions"
-                          >
-                            <MoreVertical size={16} />
-                          </button>
+              <div className="bookmark-main-content">
+                <div className="bookmark-top-bar">
+                  <div className="bookmark-tabs">
+                    <button
+                      className={subTab === 'all' ? 'tab-item active' : 'tab-item'}
+                      onClick={() => setSubTab('all')}
+                    >
+                      全部
+                    </button>
+                    <button
+                      className={subTab === 'web' ? 'tab-item active' : 'tab-item'}
+                      onClick={() => setSubTab('web')}
+                    >
+                      网页
+                    </button>
+                    <button
+                      className={subTab === 'folder' ? 'tab-item active' : 'tab-item'}
+                      onClick={() => setSubTab('folder')}
+                    >
+                      文件夹
+                    </button>
+                  </div>
 
-                          {activeActionRowId === bookmark.id && (
-                            <div className="action-menu-dropdown" style={{ right: '40px', top: '10px' }} onClick={(e) => e.stopPropagation()}>
-                              <button className="action-menu-item" onClick={() => { onOpenBookmark(bookmark, false); setActiveActionRowId(null); }}>
-                                <Globe size={14} />
-                                {text.open}
-                              </button>
-                              <button className="action-menu-item" onClick={() => { onOpenBookmark(bookmark, true); setActiveActionRowId(null); }}>
-                                <ExternalLink size={14} />
-                                {text.openInTab}
-                              </button>
-                              <button className="action-menu-item" onClick={() => { openEditDialog(bookmark); setActiveActionRowId(null); }}>
-                                <Type size={14} />
-                                {text.edit}
-                              </button>
-                              <button className="action-menu-item" onClick={() => { onAddFavorite(bookmark.id); setActiveActionRowId(null); }}>
-                                <Star size={14} />
-                                {text.setFavorite}
-                              </button>
-                              <button className="action-menu-item danger-item" onClick={() => { onDeleteBookmark(bookmark); setActiveActionRowId(null); }}>
-                                <Trash2 size={14} />
-                                {text.remove}
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                    {bookmarksInSelectedFolder.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="empty-row-container">
-                          <Search size={32} />
-                          <div>{text.noMatchedBookmarks}</div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                  <div className="bookmark-top-actions">
+                    <div className="bookmark-search-wrap">
+                      <Search size={16} />
+                      <input
+                        value={bookmarkQuery}
+                        onChange={(event) => setBookmarkQuery(event.target.value)}
+                        placeholder={text.bookmarkSearchPlaceholder}
+                      />
+                      <kbd className="kbd-shortcut">/</kbd>
+                    </div>
+                    <button
+                      className="outlined-icon-btn"
+                      onClick={() => setActiveTab('backup')}
+                      title={text.importExport}
+                      aria-label={text.importExport}
+                    >
+                      <CircleArrowDown size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bookmark-grid">
+                  {paginatedBookmarks.map((item) => (
+                    item.isFolder ? (
+                      <div
+                        className="folder-card"
+                        key={item.id}
+                        onClick={() => setSelectedFolderId(item.id)}
+                      >
+                        <div className="folder-card-icon-wrap">
+                          <Folder size={24} />
+                        </div>
+                        <div className="folder-card-info">
+                          <strong title={item.title}>{item.title}</strong>
+                          <small>{item.bookmarkCount} 个书签</small>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="bookmark-card"
+                        key={item.id}
+                        onClick={() => onOpenBookmark(item, true)}
+                      >
+                        <div className="bookmark-card-top">
+                          <div className="bookmark-card-favicon-wrap">
+                            <img
+                              src={faviconOf(item.url)}
+                              alt=""
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
+                              }}
+                            />
+                          </div>
+                          <div className="bookmark-card-actions-wrap" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="action-trigger-btn"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setActiveActionRowId(activeActionRowId === item.id ? null : item.id);
+                              }}
+                              aria-label="bookmark actions"
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+
+                            {activeActionRowId === item.id && (
+                              <div className="action-menu-dropdown" style={{ right: '0', top: '2rem' }}>
+                                <button
+                                  className="action-menu-item"
+                                  onClick={() => {
+                                    onOpenBookmark(item, false);
+                                    setActiveActionRowId(null);
+                                  }}
+                                >
+                                  <Globe size={14} />
+                                  {text.open}
+                                </button>
+                                <button
+                                  className="action-menu-item"
+                                  onClick={() => {
+                                    onOpenBookmark(item, true);
+                                    setActiveActionRowId(null);
+                                  }}
+                                >
+                                  <ExternalLink size={14} />
+                                  {text.openInTab}
+                                </button>
+                                <button
+                                  className="action-menu-item"
+                                  onClick={() => {
+                                    openEditDialog(item);
+                                    setActiveActionRowId(null);
+                                  }}
+                                >
+                                  <Type size={14} />
+                                  {text.edit}
+                                </button>
+                                <button
+                                  className="action-menu-item"
+                                  onClick={() => {
+                                    onAddFavorite(item.id);
+                                    setActiveActionRowId(null);
+                                  }}
+                                >
+                                  <Star size={14} />
+                                  {text.setFavorite}
+                                </button>
+                                <button
+                                  className="action-menu-item danger-item"
+                                  onClick={() => {
+                                    onDeleteBookmark(item);
+                                    setActiveActionRowId(null);
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                  {text.remove}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="bookmark-card-info">
+                          <strong title={item.title}>{item.title}</strong>
+                          <small title={item.url}>{hostnameOf(item.url)}</small>
+                        </div>
+                      </div>
+                    )
+                  ))}
+
+                  {bookmarksInSelectedFolder.length === 0 && (
+                    <div className="empty-grid-container">
+                      <Search size={32} />
+                      <div>{text.noMatchedBookmarks}</div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Pagination Controls */}
                 {bookmarksInSelectedFolder.length > 0 && (
@@ -1160,7 +1303,11 @@ export default function App() {
                       {/* Simple responsive page indices rendering */}
                       {paginationItems.map((item, idx) => {
                         if (item.type === 'ellipsis') {
-                          return <span key={`ellipsis-${idx}`} className="pagination-ellipsis">...</span>;
+                          return (
+                            <span key={`ellipsis-${idx}`} className="pagination-ellipsis">
+                              ...
+                            </span>
+                          );
                         }
                         const pageNum = item.pageNum!;
                         return (
@@ -1190,14 +1337,15 @@ export default function App() {
                           setCurrentPage(1);
                         }}
                       >
-                        <option value="10">10 条/页</option>
+                        <option value="12">12 条/页</option>
+                        <option value="16">16 条/页</option>
                         <option value="20">20 条/页</option>
-                        <option value="50">50 条/页</option>
+                        <option value="40">40 条/页</option>
                       </select>
                     </div>
                   </div>
                 )}
-              </section>
+              </div>
             </div>
           </section>
         )}
@@ -1681,7 +1829,7 @@ function FolderTree({
             </div>
             <span className="count-badge">{node.bookmarkCount}</span>
           </div>
-          {node.id !== '0' && (
+          {node.id !== '0' && node.id !== '1' && node.id !== '2' && node.id !== '3' && (
             <button className="folder-delete" onClick={() => onDelete(node)} title={deleteTitle}>
               <Trash2 size={14} />
             </button>
