@@ -842,7 +842,9 @@ export default function App() {
                     <button key={bookmark.id} onClick={() => onOpenBookmark(bookmark)}>
                       <img src={faviconOf(bookmark.url)} alt="" />
                       <span>{bookmark.title}</span>
-                      <small>{hostnameOf(bookmark.url)}</small>
+                      <span className={getFolderTagClass(bookmark.folderName)}>
+                        {bookmark.folderName || '全部书签'}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -921,12 +923,7 @@ export default function App() {
             </section>
 
             <footer className="footer">
-              <span>© 2024 KunTab. 让书签管理更高效</span>
-              <div className="footer-links">
-                <span>|</span>
-                <a href="#privacy">隐私政策</a>
-                <a href="#terms">使用条款</a>
-              </div>
+              <span>© 2026 KunTab. 让书签管理更高效</span>
             </footer>
           </section>
         )}
