@@ -3,6 +3,7 @@ import { getBookmarkTree, buildFolderTree, flattenFolderOptions, createFolder } 
 import { getSettings } from '../newtab/lib/storage';
 import type { FolderOption, AppSettings } from '../newtab/models';
 import { Search, Plus, Trash2, Check, Folder, Bookmark, Globe, ChevronDown, ExternalLink, Moon, Sun, Info } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 import './App.css';
 
 const ext = ((globalThis as any).browser ?? (globalThis as any).chrome) as any;
@@ -253,7 +254,7 @@ function App() {
     <main className="popup-root">
       <div className="popup-header">
         <div className="brand">
-          <div className="logo-icon-simple"></div>
+          <img className="brand-logo" src={logoImg} alt="logo" />
           <div className="brand-meta">
             <h1>KunTab</h1>
             <span className="brand-badge">{t.quickBookmark}</span>

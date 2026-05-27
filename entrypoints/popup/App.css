@@ -82,29 +82,12 @@
   gap: 10px;
 }
 
-.logo-icon-simple {
-  width: 30px;
-  height: 30px;
-  background: linear-gradient(135deg, var(--primary), #60a5fa);
+.brand-logo {
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
-  position: relative;
+  object-fit: contain;
   box-shadow: 0 4px 10px rgba(37, 99, 255, 0.15);
-}
-
-.logo-icon-simple::after {
-  content: '';
-  position: absolute;
-  top: 25%;
-  left: 25%;
-  width: 50%;
-  height: 50%;
-  background: #ffffff;
-  border-radius: 3px;
-  transform: rotate(45deg);
-}
-
-[data-theme='dark'] .logo-icon-simple::after {
-  background: #0f172a;
 }
 
 .brand-meta h1 {
