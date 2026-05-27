@@ -422,23 +422,10 @@ export default function App() {
     };
     document.addEventListener('click', handleGlobalClick);
 
-    // Keyboard navigation listener for Bookmarks search input shortcut "/"
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
-        event.preventDefault();
-        const searchInput = document.querySelector('.bookmark-search-wrap input') as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
-        }
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-
     return () => {
       offBookmark();
       offSettings();
       document.removeEventListener('click', handleGlobalClick);
-      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -1151,16 +1138,7 @@ export default function App() {
                         onChange={(event) => setBookmarkQuery(event.target.value)}
                         placeholder={text.bookmarkSearchPlaceholder}
                       />
-                      <kbd className="kbd-shortcut">/</kbd>
                     </div>
-                    <button
-                      className="outlined-icon-btn"
-                      onClick={() => setActiveTab('backup')}
-                      title={text.importExport}
-                      aria-label={text.importExport}
-                    >
-                      <CircleArrowDown size={16} />
-                    </button>
                   </div>
                 </div>
 
