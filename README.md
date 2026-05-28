@@ -40,6 +40,19 @@
 
 KunTab turns your browser's default New Tab page into an elegant, powerful dashboard centered around bookmark organization and daily utility.
 
+### 🤖 AI Chat Assistant
+- **Conversational UI**: Directly chat with a dedicated LLM assistant designed specifically for bookmark operations.
+- **Smart Categorization**: Let the AI analyze your bookmark structures and suggest the best folder organization.
+- **Duplicate Clean-up**: Scan, locate, and clean up duplicate bookmarks with a single click.
+- **Related Site Suggestions**: Discover quality, relevant websites based on your collections or active topics.
+- **Domain Interest Summaries**: Summarize key themes and topics within specific bookmark folders for review.
+
+### ⚡️ Quick Bookmarks & Shortcuts
+- **Global Keyboard Shortcut**: Toggle the quick bookmark popup instantly using `Alt + Shift + S` (Windows/Linux) or `⌥ Option + ⇧ Shift + S` (macOS).
+- **Searchable Folder Selection**: Instantly search and filter through folder hierarchies inside the popup.
+- **Inline Folder Creation**: Create new folders on the fly directly inside the search input.
+- **✨ AI Folder Suggestion**: Click "AI Suggest" in the popup to let AI analyze the page title & URL and automatically recommend the best target folder with a clear reasoning.
+
 ### 🎨 Elegant Dashboard & UI Customization
 - **Modern UI Elements**: Clean cards, translucent overlays, and glassmorphism styling that adapt seamlessly.
 - **Custom Wallpaper**: Configure custom background images via setting URLs. Set contrast, background overlays, and blur intensity to ensure your content cards remain perfectly legible.
