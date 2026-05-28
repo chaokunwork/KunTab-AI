@@ -31,8 +31,17 @@
 ### 📂 书签树管理器
 ![书签树管理器预览](assets/screenshots/kuntab-2.png)
 
-### ⚙️ 个性化设置与备份
-![个性化设置预览](assets/screenshots/kuntab-3.png)
+### 🤖 AI 智能助理
+![AI 智能助理预览](assets/screenshots/kuntab-3.png)
+
+### ⚡️ 快速收藏弹窗与 AI 推荐
+![快速收藏弹窗预览](assets/screenshots/kuntab-4.png)
+
+### 💾 安全备份与恢复
+![安全备份与恢复预览](assets/screenshots/kuntab-5.png)
+
+### ⚙️ 个性化系统设置
+![个性化系统设置预览](assets/screenshots/kuntab-6.png)
 
 ---
 

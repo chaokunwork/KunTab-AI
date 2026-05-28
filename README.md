@@ -31,8 +31,17 @@
 ### 📂 Bookmarks Manager
 ![Bookmarks Manager Preview](assets/screenshots/kuntab-2.png)
 
-### ⚙️ Settings & Backup
-![Settings Preview](assets/screenshots/kuntab-3.png)
+### 🤖 AI Chat Assistant
+![AI Chat Assistant Preview](assets/screenshots/kuntab-3.png)
+
+### ⚡️ Quick Bookmarks & AI Suggestion
+![Quick Bookmarks Preview](assets/screenshots/kuntab-4.png)
+
+### 💾 Safe Backup & Restoration
+![Backup & Restoration Preview](assets/screenshots/kuntab-5.png)
+
+### ⚙️ System Settings
+![System Settings Preview](assets/screenshots/kuntab-6.png)
 
 ---
 
